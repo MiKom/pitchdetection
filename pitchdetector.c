@@ -3,6 +3,7 @@
 #include<sndfile.h>
 #include<stdio.h>
 #include<limits.h>
+#include<math.h>
 
 #define TO_FLOAT(x) ((double)(x)/(double)SHRT_MAX)
 
@@ -15,8 +16,24 @@ static GtkWidget *window_spin;
 static GtkWidget *drawing_area;
 static GtkAdjustment *scroll_adj;
 
+static const float SCAN_DOMAIN_RATIO = 1.0f;
+static const int MIN_FREQ = 30;
+static const int MAX_FREQ = 2100;
+static const int MAX_FALLS = 20;
+static const int WINDOW_LENGTH = 500;
+static const double EXP_FALL_MULT = 2.0;
+//Constants
+static const double E_TO_15TH = 3269017.372472111;
+static const double LN_2 = 0.693147181;
 
-short *snd_data;
+double exp_fall_function(double val)
+{
+	return EXP_FALL_MULT * pow(M_E, log(val)/LN_2) / E_TO_15TH;
+}
+
+static short *snd_data;
+static float *p_pos;
+
 SF_INFO *file_info;
 void delete(GtkWidget *widget, gpointer data)
 {
@@ -37,7 +54,7 @@ draw_callback(GtkWidget *widget, cairo_t *cr, gpointer data)
 	gdk_cairo_set_source_rgba (cr, &color);
 
 	int draw_offset = (int) gtk_adjustment_get_value(scroll_adj);
-	int frames = gtk_spin_button_get_value_as_int(window_spin);
+	int frames = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(window_spin));
 	double x = 0.0;
 	double x_step = (double) width / (double) frames;
 
